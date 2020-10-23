@@ -71,23 +71,82 @@ class CabDriver():
 
         possible_actions_index = random.sample(range(1, (m-1)*m +1), requests) # (0,0) is not considered as customer request
         actions = [self.action_space[i] for i in possible_actions_idx]
-
-        
         actions.append([0,0])
 
         return possible_actions_index,actions   
+    
+    def fetchIntials(self, state, action):
+        reward = 0
+        cab_pos = state[0]
+        time_of_day = state[1]
+        day_of_week = state[2]
+        pickup_pos = action[0]
+        drop_pos = action[1]
+        return reward, cab_pos, time_of_day, day_of_week, pickup_pos, drop_pos
+    
+    #def timeTaken(self,Time_matrix,cab_pos,pickup_pos,time_of_day,day_of_week):
+        #time_taken = Time_matrix[cab_pos][pickup_pos][time_of_day][day_of_week]
+        #return time_taken, new_time_of_day, new_day_of_week
+    
+    #def computeTimeTaken(self,cab_pos,pickup_pos,time_of_day,day_of_week,time,day,time_taken):
+        #time_taken = Time_matrix[cab_pos][pickup_pos][time_of_day][day_of_week]
+        #new_time_of_day,new_day_of_week = self.update_time(time,day,time_taken)
+        #return time_taken, new_time_of_day, new_day_of_week
 
-
-
+    def update_time(self,time,day,time_taken):
+        new_time_of_day = time + math.ceil(time_taken)
+        new_day_of_week = day
+        if new_time_of_day > 23:
+            new_time_of_day = new_time_of_day % 24
+            new_day_of_week += 1
+            if new_day_of_week > 6:
+                new_day_of_week = new_day_of_week % 7
+        return new_time_of_day,new_day_of_week
+    
     def reward_func(self, state, action, Time_matrix):
         """Takes in state, action and Time-matrix and returns the reward"""
+
+        reward, cab_pos, time_of_day, day_of_week, pickup_pos, drop_pos = self.fetchIntials(state, action)
+        new_time_of_day = time_of_day #variable to calculate the time when cab reached pickup posiion if curr_pos != pickup_pos
+        new_day_of_week = day_of_week #variable to calculate the day of week when cab reached pickup posiion if curr_pos != pickup_pos
+        passenger_time = Time_matrix[pickup_pos][drop_pos][new_time_of_day][new_day_of_week]
+        idle_time      = Time_matrix[cab_pos][pickup_pos][time_of_day][day_of_week]
+        
+        
+        if cab_pos!=pickup_pos: #Calculate the new time of day and week when cab reaches pickup position
+            time_taken = Time_matrix[cab_pos][pickup_pos][time_of_day][day_of_week]
+            new_time_of_day,new_day_of_week = self.update_time(time_of_day,day_of_week,time_taken) 
+        
+        if (pickup_pos == 0) and (drop_pos==0):
+            reward = -C
+        else:
+            #print(pickup_pos,drop_pos,new_time_of_day,new_day_of_week)
+            reward = R*passenger_time - C*(passenger_time + idle_time)
+        
         return reward
-
-
 
 
     def next_state_func(self, state, action, Time_matrix):
         """Takes state and action as input and returns next state"""
+        reward, cab_pos, time_of_day, day_of_week, pickup_pos, drop_pos = self.fetchIntials(state, action)
+        new_time_of_day = time_of_day #variable to calculate the time when cab reached pickup posiion if curr_pos != pickup_pos
+        new_day_of_week = day_of_week #variable to calculate the day of week when cab reached pickup posiion if curr_pos != pickup_pos
+        total_time = 0
+
+        if cab_pos!=pickup_pos: #Calculate the new time of day and week when cab reaches pickup position
+            time_taken = Time_matrix[cab_pos][pickup_pos][time_of_day][day_of_week]
+            new_time_of_day,new_day_of_week = self.update_time(time_of_day,day_of_week,time_taken)
+            total_time += time_taken
+        
+        if (pickup_pos == 0) and (drop_pos==0):
+            total_time += 1
+            new_time_of_day,new_day_of_week = self.update_time(time_of_day,day_of_week,1)
+            next_state = [cab_pos,new_time_of_day,new_day_of_week]
+        else:
+            time_taken = Time_matrix[pickup_pos][drop_pos][new_time_of_day][new_day_of_week]
+            total_time += time_taken
+            final_time_of_day,final_day_of_week = self.update_time(new_time_of_day,new_day_of_week,time_taken)
+            next_state = [drop_pos,final_time_of_day,final_day_of_week]
         return next_state
 
 
