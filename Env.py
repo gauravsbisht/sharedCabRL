@@ -70,7 +70,7 @@ class CabDriver():
             requests =15
 
         possible_actions_index = random.sample(range(1, (m-1)*m +1), requests) # (0,0) is not considered as customer request
-        actions = [self.action_space[i] for i in possible_actions_idx]
+        actions = [self.action_space[i] for i in possible_actions_index]
         actions.append([0,0])
 
         return possible_actions_index,actions   
@@ -147,7 +147,7 @@ class CabDriver():
             total_time += time_taken
             final_time_of_day,final_day_of_week = self.update_time(new_time_of_day,new_day_of_week,time_taken)
             next_state = [drop_pos,final_time_of_day,final_day_of_week]
-        return next_state
+        return next_state,total_time
 
 
 
